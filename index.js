@@ -23,9 +23,15 @@ async function run() {
   try {
     // await client.connect();
 
-    // const exampleCollections = client.db('DBname').collection('dataName')
+    const volunteerCollections = client
+      .db("volunTrackDB")
+      .collection("volunteers");
 
-    // APIs here
+    // volunteers apis
+    app.get("/volunteers", async (req, res) => {
+      const result = await volunteerCollections.find().toArray();
+      res.send(result);
+    });
 
     await client.db("admin").command({ ping: 1 });
     console.log(
