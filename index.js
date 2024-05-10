@@ -45,6 +45,17 @@ async function run() {
       res.send(result);
     });
 
+    app.get("/volunteers-email", async (req, res) => {
+      const email = req?.query?.email;
+      console.log(email);
+      let query = {};
+      if (email) {
+        query = { organizer_email: email };
+      }
+      const result = await volunteerCollections.find(query).toArray();
+      res.send(result);
+    });
+
     app.post("/volunteers", async (req, res) => {
       const volunteers = req.body;
       const result = await volunteerCollections.insertOne(volunteers);
