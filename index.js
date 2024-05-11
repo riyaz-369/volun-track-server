@@ -47,7 +47,6 @@ async function run() {
 
     app.get("/volunteers-email", async (req, res) => {
       const email = req?.query?.email;
-      console.log(email);
       let query = {};
       if (email) {
         query = { organizer_email: email };
@@ -59,6 +58,23 @@ async function run() {
     app.post("/volunteers", async (req, res) => {
       const volunteers = req.body;
       const result = await volunteerCollections.insertOne(volunteers);
+      res.send(result);
+    });
+
+    app.put("/volunteers/:id", async (req, res) => {
+      const updateData = req.body;
+      const filter = { _id: new ObjectId(req.params.id) };
+      const options = { upsert: true };
+      const updateDoc = {
+        $set: {
+          ...updateData,
+        },
+      };
+      const result = await volunteerCollections.updateOne(
+        filter,
+        updateDoc,
+        options
+      );
       res.send(result);
     });
 
