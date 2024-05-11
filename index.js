@@ -1,6 +1,8 @@
 const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
+const jwt = require("jsonwebtoken");
+const cookieParser = require("cookie-parser");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const port = process.env.PORT || 5000;
 const app = express();
@@ -8,11 +10,16 @@ const app = express();
 // middleware
 app.use(
   cors({
-    origin: ["http://localhost:5173"],
+    origin: [
+      "http://localhost:5173",
+      "https://volun-track-9c5ae.web.app",
+      "https://volun-track-9c5ae.firebaseapp.com",
+    ],
     credentials: true,
   })
 );
 app.use(express.json());
+app.use(cookieParser());
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.308otot.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
@@ -31,6 +38,10 @@ async function run() {
     const volunteerCollections = client
       .db("volunTrackDB")
       .collection("volunteers");
+
+    const volunteersReqCollections = client
+      .db("volunTrackDB")
+      .collection("volunteerRequests");
 
     // volunteers apis
     app.get("/volunteers", async (req, res) => {
@@ -81,6 +92,12 @@ async function run() {
     app.delete("/volunteers/:id", async (req, res) => {
       const query = { _id: new ObjectId(req.params.id) };
       const result = await volunteerCollections.deleteOne(query);
+      res.send(result);
+    });
+
+    // volunteers request related apis
+    app.post("/volunteerRequests", async (req, res) => {
+      const result = await volunteersReqCollections.insertOne(req.body);
       res.send(result);
     });
 
