@@ -45,7 +45,10 @@ async function run() {
 
     // volunteers apis
     app.get("/volunteers", async (req, res) => {
-      const result = await volunteerCollections.find().toArray();
+      const result = await volunteerCollections
+        .find()
+        .sort({ deadline: 1 })
+        .toArray();
       res.send(result);
     });
 
@@ -111,10 +114,38 @@ async function run() {
       res.send(result);
     });
 
+    app.patch("/volunteerRequests/:id", async (req, res) => {
+      const filter = { _id: new ObjectId(req.params.id) };
+      const updateNum = {
+        $inc: {
+          no_of_volunteers_needed: -1,
+        },
+      };
+      const result = await volunteerCollections.updateOne(filter, updateNum);
+      res.send(result);
+    });
+
     app.delete("/volunteerRequests/:id", async (req, res) => {
       const query = { _id: new ObjectId(req.params.id) };
       const result = await volunteersReqCollections.deleteOne(query);
       res.send(result);
+    });
+
+    // apis for pagination
+    app.get("/totalVolunteers", async (req, res) => {
+      const size = parseInt(req.query.size);
+      const page = parseInt(req.query.page) - 1;
+      const result = await volunteerCollections
+        .find()
+        .skip(page * size)
+        .limit(size)
+        .toArray();
+      res.send(result);
+    });
+
+    app.get("/countVolunteers", async (req, res) => {
+      const count = await volunteerCollections.countDocuments();
+      res.send({ count });
     });
 
     await client.db("admin").command({ ping: 1 });
