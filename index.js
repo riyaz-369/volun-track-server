@@ -31,9 +31,39 @@ const client = new MongoClient(uri, {
   },
 });
 
+// token verify middleware
+const verifyToken = (req, res, next) => {
+  const token = req.cookies?.token;
+  if (!token) return res.status(401).send({ message: "unauthorized access" });
+  if (token) {
+    jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+      if (err) return res.status(401).send({ message: "unauthorized access" });
+      req.user = decoded;
+      next();
+    });
+  }
+};
+
 async function run() {
   try {
-    // await client.connect();
+    // jwt token generate
+    app.post("/jwt", async (req, res) => {
+      const user = req.body;
+      const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
+        expiresIn: "7d",
+      });
+      res
+        .cookie("token", token, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === "production",
+          sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+        })
+        .send({ success: true });
+    });
+
+    app.post("/logout", async (req, res) => {
+      res.clearCookie("token", { maxAge: 0 }).send({ success: true });
+    });
 
     const volunteerCollections = client
       .db("volunTrackDB")
@@ -59,8 +89,12 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/volunteers-email", async (req, res) => {
+    app.get("/volunteers-email", verifyToken, async (req, res) => {
       const email = req?.query?.email;
+      const tokenEmail = req?.user?.email;
+      if (email !== tokenEmail) {
+        return res.status(403).send({ message: "forbidden access" });
+      }
       let query = {};
       if (email) {
         query = { organizer_email: email };
@@ -69,7 +103,7 @@ async function run() {
       res.send(result);
     });
 
-    app.post("/volunteers", async (req, res) => {
+    app.post("/volunteers", verifyToken, async (req, res) => {
       const volunteers = req.body;
       const result = await volunteerCollections.insertOne(volunteers);
       res.send(result);
@@ -99,13 +133,17 @@ async function run() {
     });
 
     // volunteers request related apis
-    app.post("/volunteerRequests", async (req, res) => {
+    app.post("/volunteerRequests", verifyToken, async (req, res) => {
       const result = await volunteersReqCollections.insertOne(req.body);
       res.send(result);
     });
 
-    app.get("/volunteerRequests", async (req, res) => {
+    app.get("/volunteerRequests", verifyToken, async (req, res) => {
       const email = req.query.email;
+      const tokenEmail = req?.user?.email;
+      if (email !== tokenEmail) {
+        return res.status(403).send({ message: "forbidden access" });
+      }
       let query = {};
       if (email) {
         query = { "volunteer.email": email };
@@ -135,8 +173,16 @@ async function run() {
     app.get("/totalVolunteers", async (req, res) => {
       const size = parseInt(req.query.size);
       const page = parseInt(req.query.page) - 1;
+      const filter = req.query.filter;
+      const search = req.query.search;
+
+      let query = { post_title: { $regex: search, $options: "i" } };
+      if (filter) {
+        query = { ...query, category: filter };
+      }
       const result = await volunteerCollections
-        .find()
+        .find(query)
+        .sort({ deadline: 1 })
         .skip(page * size)
         .limit(size)
         .toArray();
