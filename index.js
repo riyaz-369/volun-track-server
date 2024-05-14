@@ -109,7 +109,7 @@ async function run() {
       res.send(result);
     });
 
-    app.put("/volunteers/:id", async (req, res) => {
+    app.put("/volunteers/:id", verifyToken, async (req, res) => {
       const updateData = req.body;
       const filter = { _id: new ObjectId(req.params.id) };
       const options = { upsert: true };
@@ -194,7 +194,7 @@ async function run() {
       res.send({ count });
     });
 
-    await client.db("admin").command({ ping: 1 });
+    // await client.db("admin").command({ ping: 1 });
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!"
     );
