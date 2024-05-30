@@ -50,7 +50,7 @@ async function run() {
     app.post("/jwt", async (req, res) => {
       const user = req.body;
       const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
-        expiresIn: "7d",
+        expiresIn: "1h",
       });
       res
         .cookie("token", token, {
@@ -65,13 +65,13 @@ async function run() {
       res.clearCookie("token", { maxAge: 0 }).send({ success: true });
     });
 
-    const volunteerCollections = client
-      .db("volunTrackDB")
-      .collection("volunteers");
+    const data = client.db("volunTrackDB");
 
-    const volunteersReqCollections = client
-      .db("volunTrackDB")
-      .collection("volunteerRequests");
+    const volunteerCollections = data.collection("volunteers");
+    const volunteersReqCollections = data.collection("volunteerRequests");
+    const volunteersReqConfirmationCollections = data.collection(
+      "volunteerReqConfirmations"
+    );
 
     // volunteers apis
     app.get("/volunteers", async (req, res) => {
@@ -138,8 +138,8 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/volunteerRequests", verifyToken, async (req, res) => {
-      const email = req.query.email;
+    app.get("/volunteerRequests/:email", verifyToken, async (req, res) => {
+      const email = req.params.email;
       const tokenEmail = req?.user?.email;
       if (email !== tokenEmail) {
         return res.status(403).send({ message: "forbidden access" });
@@ -149,6 +149,11 @@ async function run() {
         query = { "volunteer.email": email };
       }
       const result = await volunteersReqCollections.find(query).toArray();
+      res.send(result);
+    });
+
+    app.get("/allVolunteerRequests", async (req, res) => {
+      const result = await volunteersReqCollections.find().toArray();
       res.send(result);
     });
 
@@ -166,6 +171,12 @@ async function run() {
     app.delete("/volunteerRequests/:id", async (req, res) => {
       const query = { _id: new ObjectId(req.params.id) };
       const result = await volunteersReqCollections.deleteOne(query);
+      res.send(result);
+    });
+
+    app.post("/volunteerReqConfirmations", async (req, res) => {
+      const item = req.body;
+      const result = await volunteersReqConfirmationCollections.insertOne(item);
       res.send(result);
     });
 
