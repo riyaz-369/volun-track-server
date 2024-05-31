@@ -67,11 +67,19 @@ async function run() {
 
     const data = client.db("volunTrackDB");
 
+    const userCollections = data.collection("users");
     const volunteerCollections = data.collection("volunteers");
     const volunteersReqCollections = data.collection("volunteerRequests");
     const volunteersReqConfirmationCollections = data.collection(
       "volunteerReqConfirmations"
     );
+
+    // users related apis
+    app.post("/user", async (req, res) => {
+      const user = req.body;
+      const result = await userCollections.insertOne(user);
+      res.send(result);
+    });
 
     // volunteers apis
     app.get("/volunteers", async (req, res) => {
